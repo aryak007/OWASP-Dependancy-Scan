@@ -1,0 +1,26 @@
+{
+    "organizations": [
+        {
+            "repositories": [
+                {
+                    "notPermittedFilesList": "abc.ipa,xyz.zip",
+                    "repoName": "DockerWorkItems-1",
+                    "emailList": [
+                        "aryak.sengupta@kofax.com",
+                        "uddalak.das@kofax.com"
+                    ]
+                },
+                {
+                    "notPermittedFilesList": "abc.apk",
+                    "repoName": "automob",
+                    "emailList": [
+                        "susovan.ghosh@kofax.com",
+                        "aryak.sengupta@kofax.com",
+                        "sayan.bose@kofax.com"
+                    ]
+                }
+            ],
+            "name": "arysengupta"
+        }
+    ]
+}

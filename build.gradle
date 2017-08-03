@@ -1,0 +1,308 @@
+import org.gradle.internal.os.OperatingSystem;
+import groovy.json.JsonSlurper;
+import groovy.json.JsonOutput
+import groovy.json.JsonBuilder;
+
+ext {
+    organizationName = System.getProperty("ORGANIZATION_NAME");
+    projectName = System.getProperty("PROJECT_NAME");
+    pswgithubPath = "pswgithub.rds.lexmark.com"
+}
+
+
+
+class RepoObject {
+      String repoName
+      String notPermittedFilesList
+      ArrayList<String> emailList
+
+      public RepoObject(String repoName,String notPermittedFilesList,ArrayList<String> emailList){
+            this.repoName = repoName
+            this.notPermittedFilesList = notPermittedFilesList
+            this.emailList = emailList
+      }
+ }
+
+ class OrgObject {
+    String name
+    ArrayList<String> repositories
+
+    public OrgObject(String name, ArrayList<String> repositories){
+        this.name = name
+        this.repositories = repositories
+    }
+ }
+public String prepareFindCommandForScanningExtensions(projectName){
+    def filePath = file('fileExtensions.json');
+    def jsonFileExtensions = new JsonSlurper().parseText(filePath.text)
+
+    String fullFindCommand = "find "+projectName
+
+
+
+    if(jsonFileExtensions.NonPermittedFilesExtList!=null){
+
+        fullFindCommand = fullFindCommand+" -type f \\("
+        jsonFileExtensions.NonPermittedFilesExtList.eachWithIndex{ fileExtension,i -> 
+            if(i==0)
+                fullFindCommand = fullFindCommand +" -name \"*."+fileExtension+"\""
+            else
+                fullFindCommand = fullFindCommand +" -o -name \"*."+fileExtension+"\""
+        }
+        fullFindCommand = fullFindCommand+" \\) "
+    }
+
+    if(jsonFileExtensions.FilesToBeExcluded!=null){
+            fullFindCommand = fullFindCommand+" \\("
+            jsonFileExtensions.FilesToBeExcluded.each{ file -> 
+                fullFindCommand = fullFindCommand+" ! -name \""+file+"\""
+        }
+        fullFindCommand = fullFindCommand+" \\) "
+    }
+    
+    return fullFindCommand
+
+}
+
+
+public def scanRepositoriesOfAllOrgsInConfigFile(){
+    def filePath = file('config.json');
+    def jsonContent = new JsonSlurper().parseText(filePath.text)
+    boolean flag = false
+    def builder = new JsonBuilder()
+
+    List<OrgObject> orgList = new ArrayList<OrgObject>();
+
+        jsonContent.organizations.each { org ->
+
+            List<RepoObject> repoList = new ArrayList<RepoObject>();
+            org.repoNames.each { repoName ->
+            def branchToCheckout = identifyBranch(org.name,repoName)
+            def emailList = fetchContributorsEmailList(org.name,repoName) 
+            scanSpecificProjectAutomated(org.name,repoName,emailList,branchToCheckout)
+
+            Properties properties = new Properties()
+            File envFile = new File('env.properties')
+            envFile.withInputStream {
+                properties.load(it)
+            }
+            def notPermittedFilesPresent = properties.NOT_PERMITTED_FILES_PRESENT
+            def notPermittedFilesList = properties.NOT_PERMITTED_FILES_LIST
+
+            if(notPermittedFilesPresent=="Y")
+            {
+                RepoObject repoObject = new RepoObject(repoName,notPermittedFilesList,emailList)
+                repoList.add(repoObject)
+            }
+        }
+        OrgObject orgObject = new OrgObject(org.name,repoList)
+        orgList.add(orgObject)
+    }
+    def resultJson = builder {
+        organizations orgList
+    }
+    //println builder.toPrettyString()
+    File resultsJsonFile = new File('scanResults.json')
+    resultsJsonFile.withWriter( 'UTF-8' ) { it << builder.toPrettyString() }
+    
+}
+
+public def scanRepositoriesOfSpecificOrgInConfigFile(orgName){
+    def filePath = file('config.json');
+    def jsonContent = new JsonSlurper().parseText(filePath.text)
+    boolean flag = false
+    def builder = new JsonBuilder()
+
+    List<OrgObject> orgList = new ArrayList<OrgObject>();
+
+    try{
+        jsonContent.organizations.each { org ->
+
+            if(org.name==orgName){
+                    List<RepoObject> repoList = new ArrayList<RepoObject>();
+                    org.repoNames.each { repoName ->
+                    def branchToCheckout = identifyBranch(org.name,repoName)
+                    def emailList = fetchContributorsEmailList(org.name,repoName) 
+                    scanSpecificProjectAutomated(org.name,repoName,emailList,branchToCheckout)
+
+                    Properties properties = new Properties()
+                    File envFile = new File('env.properties')
+                    envFile.withInputStream {
+                        properties.load(it)
+                    }
+                    def notPermittedFilesPresent = properties.NOT_PERMITTED_FILES_PRESENT
+                    def notPermittedFilesList = properties.NOT_PERMITTED_FILES_LIST
+
+                    if(notPermittedFilesPresent=="Y")
+                    {
+                        flag=true
+                        RepoObject repoObject = new RepoObject(repoName,notPermittedFilesList,emailList)
+                        repoList.add(repoObject)
+                    }
+                }
+                OrgObject orgObject = new OrgObject(org.name,repoList)
+                orgList.add(orgObject)
+                    if(flag)
+                        throw new Exception()
+            
+                
+            }
+        }
+            
+    }
+
+    catch (Exception e){
+            println "Some non-permitted files detected. Check scanResults.json for more details"
+    }
+
+    def resultJson = builder {
+            organizations orgList
+        }
+
+    //println builder.toPrettyString()
+    File resultsJsonFile = new File('scanResults.json')
+    resultsJsonFile.withWriter( 'UTF-8' ) { it << builder.toPrettyString() }
+}
+
+
+public def scanSpecificProjectManual(organizationName,projectName,emailList,branchToCheckout){
+
+    def projectLink = "https://"+pswgithubPath+"/"+organizationName+"/"+projectName+".git"
+    cloneProjectAndCheckoutBranch(projectName,projectLink,branchToCheckout)
+    println "----------------   SCANNING FILES FOR PROJECT "+ projectName +" ----------------"
+    String fullFindCmd = prepareFindCommandForScanningExtensions(projectName)
+    executeCmd("bash",["scanManual.sh",fullFindCmd,emailList,projectLink],'.',false,null)
+    executeCmd("rm",["-rf",projectName],'.',false,null)  
+       
+}
+
+public def scanSpecificProjectAutomated(organizationName,projectName,emailList,branchToCheckout){
+
+    def projectLink = "https://"+pswgithubPath+"/"+organizationName+"/"+projectName+".git"
+    cloneProjectAndCheckoutBranch(projectName,projectLink,branchToCheckout)
+    println "----------------   SCANNING FILES FOR PROJECT "+projectName +" ----------------"
+    String fullFindCmd = prepareFindCommandForScanningExtensions(projectName)
+    executeCmd("bash",["scanAutomated.sh",fullFindCmd,emailList,projectLink],'.',false,null)
+    executeCmd("rm",["-rf",projectName],'.',false,null)  
+      
+}
+
+public def fetchContributorsEmailList(organizationName,projectName){
+    def contibutorsData = new URL("https://"+pswgithubPath+"/api/v3/repos/"+organizationName+"/"+projectName+"/contributors").getText()
+    def contributorsDataJson = (new JsonSlurper().parseText(contibutorsData))
+    def emailIds = []
+    for(def contributor:contributorsDataJson){
+        def contribUserData = new URL(contributor.url).getText()
+        def contribUserDataJson = (new JsonSlurper().parseText(contribUserData))
+        String contribUserName =  contribUserDataJson.name
+        emailIds.add((contribUserName.split(' ').join('.')).toLowerCase()+"@kofax.com")
+    }
+    return emailIds
+}
+
+public def identifyBranch(organizationName,projectName){
+    def projectInfo = new URL("https://pswgithub.rds.lexmark.com/api/v3/repos/"+organizationName+"/"+projectName).getText()
+    def projectInfoJson = (new JsonSlurper().parseText(projectInfo))
+    def defaultBranch = projectInfoJson.default_branch
+
+    if(defaultBranch.toLowerCase()=="develop")
+    {
+        return defaultBranch
+    }
+
+    def branchInfo = new URL("https://pswgithub.rds.lexmark.com/api/v3/repos/"+organizationName+"/"+projectName+"/branches").getText()
+    def branchInfoJson = (new JsonSlurper().parseText(branchInfo))
+    def foundDevelop = false
+    def developBranch
+    for(def branch:branchInfoJson){
+        if(branch.name.toLowerCase()=="develop"){
+            foundDevelop = true
+            developBranch = branch.name
+            break;
+        }
+    }
+
+    if(foundDevelop)
+        return developBranch
+    else
+        return defaultBranch
+}
+
+def createEmailListForAutomated(organizationName,projectName){
+    def emailList = fetchContributorsEmailList(organizationName,projectName)
+        println emailList
+        List emailListForAutomated = []
+        for(int i = 0;i<emailList.size()-1;i++){
+            emailListForAutomated.add(emailList[i])
+        }
+    return emailListForAutomated
+}
+
+def createEmailListForManual(organizationName,projectName){
+    def emailList = fetchContributorsEmailList(organizationName,projectName)
+        println emailList
+        def emailListFormatted = ""
+        for(int i = 0;i<emailList.size()-1;i++){
+                emailListFormatted = emailList[i]+","+emailListFormatted
+        }
+       
+        emailListFormatted = emailListFormatted+ emailList[emailList.size()-1]
+
+        return emailListFormatted
+}
+
+
+public def cloneProjectAndCheckoutBranch(name,link,branch){
+    executeCmd("git",["clone",link],'.',false,null)
+    executeCmd("git",["checkout",branch],name,false,null)
+}
+
+task scanProject<<{
+        println project.projectName
+        def branchToCheckout = identifyBranch(project.organizationName,project.projectName)
+        def emailList = createEmailListForManual(project.organizationName,project.projectName) 
+        //def branchToCheckout="develop"
+        //def emailList=["a@g.com"]
+        scanSpecificProjectManual(project.organizationName,project.projectName,emailList,branchToCheckout)
+
+}
+
+task test<<{
+    //println createEmailListForAutomated("production-engineering","OWASP-Dependancy-Scan-pre-receive-hook")
+    //println identifyBranch("production-engineering","imagenow-postgres-docker-image-builder")
+    println prepareFindCommandForScanningExtensions("automob")
+}
+ 
+
+task fireUpAutomatedScansFromConfigFile<<{
+
+    if(project.organizationName=="All")
+        scanRepositoriesOfAllOrgsInConfigFile()
+    else
+        scanRepositoriesOfSpecificOrgInConfigFile(project.organizationName)
+}
+
+
+public def executeCmd(baseCmd,params,workFolder,exitValue,out){
+    
+    return exec{
+            workingDir file(workFolder)
+            if (OperatingSystem.current().isWindows()) {
+                params.add(0,baseCmd);
+                params.add(0,'/c');
+                executable 'cmd' 
+                args params
+            } else {
+                executable baseCmd
+                args params  
+            }
+            if(out!=null)
+                standardOutput = out
+            ignoreExitValue exitValue
+        }       
+}
+
+
+
+//http://arysengupta:000ef5e8dbc4498fb91721e82c87f99c@indiajenkins.pvi.com/job/Experiments/job/Cyclops/job/OWASP/job/OWASP-Dependancy-Check/buildWithParameters?PROJECT_NAME='+projectName
+

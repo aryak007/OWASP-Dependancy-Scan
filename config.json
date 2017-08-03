@@ -1,0 +1,21 @@
+{
+	"organizations":[
+		{
+			"name":"production-engineering",
+			"repoNames": [ "automob", "perceptive-content", "PingServer", "pages-template", "package-releaser", "JenkinsJobMigrator", "apapproval-docker-fullstack", "reverse-proxy-docker", "reverse-proxy-apache", "ISMP-7.1", "local-docker-experience-package-builder", "adm-eval-docker", "DockerWorkItems", "nginx-load-balancer-docker", "Docker-scripts", "octopus-cocoapods-specs", "imagenow-docker",  "octopus-shared-gradle-scripts", "dashboard-service", "dashboard-ui", "Docker-images-deletion", "Pipeline-scripts-indiajenkins", "OWASP-Dependancy-Scan", "OWASP-Dependancy-Scan-pre-receive-hook", "OWASP-Dependancy-Check-Trigger", "OWASP-Dependancy-Check-Manual"]
+		},
+		{
+			"name":"financial-process-automation",
+			"repoNames":[ "lesrdk-native-android-core", "lesrdk-native-android-services", "lesrdk-native-ios-core", "lesrdk-native-ios-services", "lesrdk-sample-experience-ios-app", "lesrdk-sample-experience-android-app", "les-framework-filetransfer", "les-framework-objectstore", "les-framework-offlinemanagement", "les-framework-filesystem", "lesrdk-android-experience-app", "lesrdk-ios-experience-app", "les-rdk-fpa-mediaportal-client", "les-rdk-fpa-mobile-capture", "les-rdk-fpa-media-portal-connection"]
+		},
+		{
+			"name":"ClientFramework",
+			"repoNames":["framework-core", "web-platform", "application", "framework-shell", "sample", "unittest", "evolution-experience-handbook", "bear", "power", "framework-controls", "require-conjoin", "sampleform", "samplecontrols", "framework-application-context", "buildtools", "psw-framework-googleauth", "desktop-master-service", "framework-desktop-service-connector", "desktop-application", "AEG-app", "PerceptiveSample-app", "PipelineTools", "PerceptiveExperienceContentApps", "psw-utility-twittersearch", "autoPipeline", "PipelinePlugin", "js-release", "JSBuildPlugin", "EvoAppPlugin", "framework-desktop-platform", "processmining", "psw-framework-mfp-platform", "psw-framework-mfp-shell", "psw-capture-pme", "PME-app", "GettingStarted", "ModuleLauncher", "nodejs-simple-file-server", "PEDS-service", "mobile-native-bridge-test", "packman", "node-obfuscator", "grunt-jasmine-node", "notification", "DesktopApplicationMinimum-app", "BusinessAnalytics", "PushService", "psw-framework-analyticsmanager", "master-service-gridlock-test", "framework-notifications", "psw-healthcare-arrmanager", "psw-test-compliance", "evo-ci-docker", "HTML_CodeSniffer", "lesrdl-framework-printmanager", "Document-app", "BaseBundle", "desktop-service-connector-sample", "Admissions-Eval", "cef", "xilium.cefglue", "documentation-templates", "node-windows", "grunt-psw", "framework-home", "EncryptedTokenAuthenticator", "DataWarehouseBuild", "lesrdl-content-integrationserver", "psw-healthcare-pixmanager", "framework-brand", "framework-require-plugins", "framework-shims", "lexmark-package-build", "eslint-config-lexmark", "framework-runtime", "PerceptiveExperienceMobileBase-app", "experience-bundles", "experience-karma", "experience-handbook-pipeline", "package-template", "experience-handbook", "leellis-utility-search", "psw_search_api", "framework-typescript-definitions", "content-apps", "framework-settings", "psw-healthcare-auditconsumer", "temporary"]
+		},
+
+		{
+			"name":"arysengupta",
+			"repoNames":["DockerWorkItems-1","automob"]
+		}
+	]
+}

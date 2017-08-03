@@ -1,0 +1,21 @@
+{
+	"NonPermittedFilesExtList":[
+		"jar",
+		"aar",
+		"zip",
+		"rar",
+		"tar",
+		"gzip",
+		"exe",
+		"dmg",
+		"zip",
+		"apk",
+		"ipa",
+		"dll",
+		"pyc",
+		"gem"
+	],
+	"FilesToBeExcluded":[
+		"gradle-wrapper.jar"	
+	]
+}
